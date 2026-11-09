@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>임신기 단축근로 계산기</title>
+<meta name="description" content="출산예정일만 넣으면 임신기 근로시간 단축(하루 2시간)을 언제부터 언제까지 쓸 수 있는지 바로 계산해 드려요.">
+<meta property="og:title" content="임신기 단축근로 계산기">
+<meta property="og:description" content="출산예정일만 넣으면 단축근로 가능 기간이 바로 나와요 (2025.2.23 개정법 기준)">
+<meta property="og:type" content="website">
+<style>body{margin:0}[hidden]{display:none!important}*{box-sizing:border-box}</style>
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 한 컬럼 카드형 계산기 — 입력 → 40주 타임라인 → 구간별 날짜 → 유의사항 */
+:root{
+  --bg:#FFF9FB; --surface:#FFEFF4; --line:#F6D3DF; --fg:#3D2430; --muted:#8A6574;
+  --navy:#D6457A; --early:#F48FB1; --late:#C2185B; --gray:#F3E1E8; --ok:#2E8B57;
+  --f-display:"Gowun Dodum","Noto Sans KR","Malgun Gothic",sans-serif;
+  --f-body:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#21161B; --surface:#2D1E25; --line:#4A3039; --fg:#F8E8EE; --muted:#C9A7B5;
+  --navy:#F48FB1; --early:#F8A5C2; --late:#E5578C; --gray:#43303A; --ok:#5CC48A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#21161B; --surface:#2D1E25; --line:#4A3039; --fg:#F8E8EE; --muted:#C9A7B5;
+  --navy:#F48FB1; --early:#F8A5C2; --late:#E5578C; --gray:#43303A; --ok:#5CC48A; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.65}
+.wrap{max-width:640px;margin:0 auto;padding-block:28px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:22px}
+.eyebrow{margin:0 0 4px;font-size:.8rem;font-weight:700;letter-spacing:.06em;color:var(--early)}
+h1{font-family:var(--f-display);font-size:1.75rem;line-height:1.3;margin:0;color:var(--navy);text-wrap:balance}
+.sub{margin:6px 0 0;color:var(--muted);font-size:.92rem}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px}
+label{font-weight:700;font-size:.92rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input[type=date]{font:inherit;font-size:1rem;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);flex:1;min-width:0}
+input[type=date]:focus-visible,input[type=checkbox]:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.chk{display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:.9rem;color:var(--muted)}
+.chk input{margin-top:5px;accent-color:var(--navy)}
+.now{font-size:.95rem}
+.now b{color:var(--navy);font-variant-numeric:tabular-nums}
+/* timeline */
+.tl{display:flex;flex-direction:column;gap:6px}
+.bar{position:relative;height:30px;border-radius:8px;overflow:hidden;background:var(--gray);display:flex}
+.seg{height:100%}
+.seg.e{background:var(--early)} .seg.m{background:var(--gray)} .seg.l{background:var(--late)}
+.track{position:relative;padding-top:40px}
+.me{position:absolute;top:0;width:0;height:40px}
+.me .bubble{position:absolute;bottom:9px;white-space:nowrap;font-size:.78rem;font-weight:700;color:var(--navy);
+  background:var(--bg);border:1.5px solid var(--navy);border-radius:99px;padding:2px 9px 2px 6px;line-height:1.5}
+.me .bubble .em{font-size:1rem;vertical-align:-2px;margin-right:2px}
+.me .pin{position:absolute;bottom:2px;left:-5px;width:10px;height:10px;background:var(--bg);
+  border-right:1.5px solid var(--navy);border-bottom:1.5px solid var(--navy);transform:rotate(45deg)}
+@media (prefers-reduced-motion:no-preference){.me .em{display:inline-block;animation:bob 2.4s ease-in-out infinite}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.ticks{position:relative;height:16px;font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.ticks span{position:absolute;transform:translateX(-50%)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* result cards */
+.res{display:grid;gap:12px}
+.card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;background:var(--bg)}
+.card .tag{font-size:.75rem;letter-spacing:.04em;font-weight:700}
+.card.e .tag{color:var(--early)} .card.l .tag{color:var(--late)} .card.m .tag{color:var(--muted)}
+.card .dates{font-size:1.12rem;font-weight:700;font-variant-numeric:tabular-nums}
+.card .note{font-size:.85rem;color:var(--muted)}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:99px;border:1px solid currentColor;margin-left:6px;vertical-align:2px}
+.pill.on{color:var(--ok)}
+h2{font-family:var(--f-display);font-size:1.15rem;margin:0;color:var(--navy)}
+ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;font-size:.9rem}
+.foot{font-size:.78rem;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.seg{transition:flex-basis .3s}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">예비맘을 위한 계산기</p>
+    <h1>출산예정일로 보는<br>임신기 단축근로 가능 기간</h1>
+    <p class="sub">2025년 2월 23일 시행 근로기준법 제74조 제7항 기준 · 하루 2시간 단축, 임금 삭감 없음</p>
+  </header>
+
+  <section class="panel">
+    <label for="due">출산예정일</label>
+    <div class="row"><input type="date" id="due" value="2027-06-01"></div>
+    <label class="chk"><input type="checkbox" id="risk"> 고위험 임신으로 의사 진단을 받았어요 (임신 전 기간 사용 가능)</label>
+    <div class="now" id="now"></div>
+  </section>
+
+  <section class="tl" aria-label="임신 40주 타임라인">
+    <div class="track">
+      <div class="me" id="today" hidden><span class="bubble" id="bubble"><span class="em" aria-hidden="true">👶</span><span id="meTxt">지금 여기</span></span><span class="pin"></span></div>
+      <div class="bar" id="bar">
+        <div class="seg e" id="sE"></div><div class="seg m" id="sM"></div><div class="seg l" id="sL"></div>
+      </div>
+    </div>
+    <div class="ticks"><span style="left:0;transform:none">0주</span><span style="left:30%">12주</span><span style="left:77.5%">31주</span><span style="left:100%;transform:translateX(-100%)">40주</span></div>
+    <div class="legend"><span><i style="background:var(--early)"></i>법정 단축 (초기)</span><span><i style="background:var(--gray)"></i>회사 재량</span><span><i style="background:var(--late)"></i>법정 단축 (후기)</span></div>
+  </section>
+
+  <section class="res" id="res"></section>
+
+  <section class="panel">
+    <h2>꼭 알아두세요</h2>
+    <ul>
+      <li>단축을 시작하려는 날의 <b>3일 전까지</b> 신청서와 의사 진단서(임신 주수 확인용)를 회사에 내야 해요.</li>
+      <li>하루 근로시간이 8시간 미만이면 하루 <b>6시간</b>이 되도록만 줄일 수 있어요.</li>
+      <li>초기에 썼더라도 후기에 다시 쓸 수 있어요.</li>
+      <li>"32주 이후"의 시작일은 고용노동부 안내(임신 218일째 = 31주 1일)를 따랐어요. 회사나 해석에 따라 32주 0일부터로 보는 곳도 있어서 두 날짜를 함께 보여드려요.</li>
+      <li>주수는 출산예정일에서 280일을 거꾸로 세어 계산한 값이에요. 병원에서 받은 주수와 다르면 병원 기준을 따르세요.</li>
+    </ul>
+  </section>
+
+  <p class="foot">참고용 계산기이며 법률 자문이 아닙니다. 정확한 적용은 고용노동부 고객상담센터(국번 없이 1350)에 확인하세요.</p>
+</div>
+
+<script>
+const DAY=86400000;
+function parse(s){const [y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d));}
+function add(dt,n){return new Date(dt.getTime()+n*DAY);}
+const W=['일','월','화','수','목','금','토'];
+function fmt(dt){return `${dt.getUTCFullYear()}.${String(dt.getUTCMonth()+1).padStart(2,'0')}.${String(dt.getUTCDate()).padStart(2,'0')}(${W[dt.getUTCDay()]})`;}
+function wk(n){return `${Math.floor(n/7)}주 ${n%7}일`;}
+function todayUTC(){const t=new Date();return new Date(Date.UTC(t.getFullYear(),t.getMonth(),t.getDate()));}
+
+/* 핵심 계산: 임신 0주 0일 = 예정일 - 280일 */
+function calc(dueStr){
+  const due=parse(dueStr), lmp=add(due,-280);
+  return {
+    due, lmp,
+    earlyEnd:add(lmp,84),     // 12주 0일
+    midStart:add(lmp,85),     // 12주 1일
+    lateStart:add(lmp,218),   // 31주 1일 (고용노동부 안내: 218일째)
+    lateStart32:add(lmp,224), // 32주 0일 (보수적 해석)
+    midEnd:add(lmp,217)       // 31주 0일
+  };
+}
+
+function render(){
+  const v=document.getElementById('due').value, risk=document.getElementById('risk').checked;
+  const res=document.getElementById('res'), now=document.getElementById('now');
+  if(!v){res.innerHTML='';now.textContent='출산예정일을 넣으면 가능 기간이 바로 계산돼요.';return;}
+  const r=calc(v), t=todayUTC(), g=Math.round((t-r.lmp)/DAY);
+  const inE=g>=0&&g<=84, inL=g>=218&&g<=280;
+  const ok=risk?(g>=0&&g<=280):(inE||inL);
+  if(g<0) now.innerHTML='아직 임신 0주 이전 날짜예요. 예정일을 다시 확인해 주세요.';
+  else if(g>280) now.innerHTML=`오늘은 출산예정일이 <b>${g-280}일</b> 지난 날이에요.`;
+  else now.innerHTML=`오늘(${fmt(t)})은 <b>임신 ${wk(g)}</b>이에요. ${ok?'<span class="pill on">지금 단축 가능</span>':'<span class="pill">회사 재량 구간</span>'}`;
+
+  // timeline
+  const sE=document.getElementById('sE'),sM=document.getElementById('sM'),sL=document.getElementById('sL');
+  if(risk){sE.style.flex='0 0 0%';sM.style.flex='0 0 0%';sL.style.flex='0 0 100%';}
+  else{sE.style.flex=`0 0 ${84/280*100}%`;sM.style.flex=`0 0 ${(217-84)/280*100}%`;sL.style.flex='1 1 auto';}
+  const td=document.getElementById('today');
+  if(g>=0&&g<=280){td.hidden=false;const pct=g/280*100;td.style.left=`${pct}%`;
+    document.getElementById('meTxt').textContent=`지금 ${Math.floor(g/7)}주`;
+    const b=document.getElementById('bubble');b.style.transform=`translateX(${pct<12?-12:pct>88?-88:-50}%)`;}
+  else td.hidden=true;
+
+  if(risk){
+    res.innerHTML=`
+    <div class="card l"><span class="tag">고위험 임신 · 전 기간</span>
+      <span class="dates">임신 확인 후 ~ 출산 전까지</span>
+      <span class="note">임신 0주 0일 기준일 ${fmt(r.lmp)} · 출산예정일 ${fmt(r.due)}<br>의사 진단서가 필요해요. 대상 질환은 근로기준법 시행규칙에서 정하고 있어요.</span></div>`;
+    return;
+  }
+  res.innerHTML=`
+  <div class="card e"><span class="tag">초기 · 법으로 보장</span>
+    <span class="dates">임신 확인 후 ~ ${fmt(r.earlyEnd)}</span>
+    <span class="note">임신 12주 0일까지 · 임신 0주 0일 기준일 ${fmt(r.lmp)}</span></div>
+  <div class="card m"><span class="tag">중기 · 회사 재량</span>
+    <span class="dates">${fmt(r.midStart)} ~ ${fmt(r.midEnd)}</span>
+    <span class="note">12주 1일 ~ 31주 0일 · 법적 의무는 아니지만 회사가 허용할 수 있어요</span></div>
+  <div class="card l"><span class="tag">후기 · 법으로 보장</span>
+    <span class="dates">${fmt(r.lateStart)} ~ 출산 전까지</span>
+    <span class="note">31주 1일부터(고용노동부 안내) · 32주 0일로 보면 ${fmt(r.lateStart32)}부터<br>출산예정일 ${fmt(r.due)} · 출산전후휴가를 시작하면 단축근로는 끝나요</span></div>`;
+}
+document.getElementById('due').addEventListener('input',render);
+document.getElementById('risk').addEventListener('change',render);
+render();
+</script>
+
+</body>
+</html>
